@@ -1,34 +1,49 @@
-from groq.types.chat import ChatCompletionMessageParam
-from models import groq_client
-import config
 import json
+import config
+from models.groq_client import client
+from prompts.system_prompt import SYSTEM_PROMPT
 
-messages : list[ChatCompletionMessageParam] = []
-count = 0
-max_count = config.MAX_COUNT
-client = groq_client.client
-answers = []
+def generate_answer(user_query:str) -> list[str]:
+    """
+    Generate multiple answers for the same question
+    """
 
-while count < max_count:
+    messages = [
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT
+        },
+        {
+            "role": "user",
+            "content": user_query
+        }
+    ]
 
-    response = client.chat.completions.create(
-        model = "llama-3.1-8b-instant",
-        messages = messages,
-        response_format = {"type": "json_object"}
-    )
+    answers = []
+    count = 0
 
-    content = response.choices[0].message.content
+    while count < config.MAX_COUNT:
 
-    if content is None:
-        print("No response Recieved, Trying again .....")
-        continue
+        response = client.chat.completions.create(
+            model = config.GENERATOR_MODEL,
+            messages = messages,
+            response_format = {"type": "json_object"}
+        )
 
-    try:
-        result = json.loads(content)
-        answers.append(result["result"])
-        count += 1
-        print(f"Answer {count} found / 10 collected")
+        content = response.choices[0].message.content
 
-    except(KeyError, json.JSONDecodeError):
-        print(f"Getting Error at {count + 1}th Iteration...!")
-        continue
+        if content is None:
+            print("No response Recieved, Trying again .....")
+            continue
+
+        try:
+            result = json.loads(content)
+            answers.append(result["result"])
+            count += 1
+            print(f"Answer {count} found / {config.MAX_COUNT} collected")
+
+        except(KeyError, json.JSONDecodeError):
+            print(f"Getting Error at {count + 1}th Iteration...!")
+            continue
+    
+    return answers
