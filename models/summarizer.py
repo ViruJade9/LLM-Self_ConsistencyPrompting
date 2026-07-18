@@ -38,4 +38,8 @@ def summarizer_answers(answers: list[str]) -> str:
   content = response.choices[0].message.content
 
   if content is None:
-    raise exce
+    raise Exception("Summary response is empty")
+  
+  result = json.loads(content)
+
+  return result["final_answer"]
